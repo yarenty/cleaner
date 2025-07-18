@@ -1,15 +1,14 @@
 mod args;
 mod utils;
 use clap::Parser;
+use clap::ValueEnum;
 use std::fs;
 use walkdir::WalkDir;
-
 use color_eyre::eyre::{eyre, Result};
-use itertools::Itertools;
 use log::info;
 
 use crate::args::Args;
-use crate::utils::setup_logger;
+use crate::utils::{setup_logger, default_dirs_for_kind};
 
 /// Walk through specified directories and ...
 /// - delete /target
@@ -27,10 +26,23 @@ async fn main() -> Result<()> {
         return Err(eyre!(format!("Path {} do not exist", &path)));
     }
 
-    let dirs = args.dirs.split(',').collect_vec();
+    // Determine which directories to clean
+    let default_dirs = match &args.kind {
+        Some(kind) => default_dirs_for_kind(kind),
+        None => args::ProjectKind::value_variants()
+            .iter()
+            .flat_map(default_dirs_for_kind)
+            .collect(),
+    };
+    let user_dirs: Vec<_> = args.dirs.split(',').collect();
+    let dirs: Vec<&str> = if user_dirs == default_dirs {
+        default_dirs
+    } else {
+        user_dirs
+    };
 
-    info!("Cleaning all directories that finished with either: {:?}",dirs);
-    for file in WalkDir::new(path).into_iter().filter_map(|file| {
+    info!("Cleaning all directories that finished with either: {:?}", dirs);
+    for file in WalkDir::new(&path).into_iter().filter_map(|file| {
         let f = file.unwrap();
         if f.file_type().is_dir() && dirs.iter().any(|v| f.path().ends_with(v)) {
             Some(f)

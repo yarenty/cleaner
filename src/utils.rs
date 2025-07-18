@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use env_logger::fmt::{Color, Formatter};
+use env_logger::fmt::Formatter;
 use env_logger::{Builder, WriteStyle};
 use log::{Level, LevelFilter, Record};
 use std::io::Write;
@@ -14,17 +14,13 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
             "".to_string()
         };
 
-        let mut thread_style = formatter.style();
-        let mut level_style = formatter.style();
-
-        match record.level() {
-            Level::Error => level_style.set_color(Color::Red).set_bold(true),
-            Level::Warn => level_style.set_color(Color::Red),
-            Level::Info => level_style.set_color(Color::Green).set_intense(true),
-            Level::Debug => level_style.set_color(Color::Blue),
-            Level::Trace => level_style.set_color(Color::Magenta),
+        let level = match record.level() {
+            Level::Error => "[ERROR]",
+            Level::Warn => "[WARN]",
+            Level::Info => "[INFO]",
+            Level::Debug => "[DEBUG]",
+            Level::Trace => "[TRACE]",
         };
-        thread_style.set_color(Color::Magenta).set_intense(true);
 
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
@@ -32,8 +28,8 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
             formatter,
             "{} {}{} - {} - {}",
             time_str,
-            thread_style.value(thread_name),
-            level_style.value(record.level()),
+            thread_name,
+            level,
             record.target(),
             record.args()
         )
