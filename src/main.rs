@@ -63,15 +63,19 @@ fn confirm_deletion(dirs: &[&str], force: bool) -> bool {
 }
 
 /// Recursively walk the directory tree and remove matching directories, or just print if dry_run is true.
-fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str]) {
+fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str], max_depth: usize) {
     info!(
-        "Cleaning all directories that finished with either: {:?}, excluding: {:?}",
-        dirs, exclude
+        "Cleaning all directories that finished with either: {:?}, excluding: {:?}, max_depth: {}",
+        dirs, exclude, max_depth
     );
+    let mut walkdir = WalkDir::new(path);
+    if max_depth > 0 {
+        walkdir = walkdir.max_depth(max_depth);
+    }
     // Compile glob patterns for dirs and exclude
     let dir_patterns: Vec<Pattern> = dirs.iter().filter_map(|p| Pattern::new(p).ok()).collect();
     let exclude_patterns: Vec<Pattern> = exclude.iter().filter_map(|p| Pattern::new(p).ok()).collect();
-    for file in WalkDir::new(path).into_iter().filter_map(|file| {
+    for file in walkdir.into_iter().filter_map(|file| {
         let f = file.unwrap();
         let file_path = f.path();
         let file_name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
@@ -118,7 +122,7 @@ async fn main() -> Result<()> {
         return Ok(());
     }
     // Clean the directories
-    clean_directories(&path, &dirs, args.dry_run, &exclude);
+    clean_directories(&path, &dirs, args.dry_run, &exclude, args.max_depth);
     info!("DONE.");
     Ok(())
 }

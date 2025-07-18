@@ -82,4 +82,9 @@ pub struct Args {
     /// Example: --log debug
     #[clap(short, long, default_value = "info")]
     pub log: String,
+
+    /// Maximum recursion depth for directory search. 0 means unlimited.
+    /// Example: --max-depth 2
+    #[clap(long, default_value = "0")]
+    pub max_depth: usize,
 }
