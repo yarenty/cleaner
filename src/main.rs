@@ -24,6 +24,72 @@ use walkdir::WalkDir;
 use crate::args::Args;
 use crate::utils::{default_dirs_for_kind, setup_logger};
 
+/// Parse CLI arguments and check if the path exists.
+fn parse_and_validate_args() -> Result<(Args, String)> {
+    let args = Args::parse();
+    let path = args.path.clone();
+    if fs::metadata(&path).is_err() {
+        return Err(eyre!(format!("Path {} do not exist", &path)));
+    }
+    Ok((args, path))
+}
+
+/// Determine which directories to clean based on kind or user override, deduplicated.
+fn determine_dirs_to_clean(args: &Args) -> Vec<&str> {
+    match &args.kind {
+        Some(kind) => default_dirs_for_kind(kind),
+        None => {
+            use std::collections::HashSet;
+            args::ProjectKind::value_variants()
+                .iter()
+                .flat_map(default_dirs_for_kind)
+                .collect::<HashSet<_>>() //deduplication
+                .into_iter()
+                .collect::<Vec<_>>()
+        }
+    }
+    .into_iter()
+    .collect::<Vec<_>>()
+}
+
+/// Prompt the user for confirmation unless force is set. Returns true if confirmed.
+fn confirm_deletion(dirs: &[&str], force: bool) -> bool {
+    if force {
+        return true;
+    }
+    use std::io::{self, Write};
+    println!("WARNING: The following directories will be deleted recursively:");
+    for d in dirs {
+        println!("  - {}", d);
+    }
+    print!("Are you sure you want to proceed? [y/N]: ");
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    let input = input.trim().to_lowercase();
+    input == "y" || input == "yes"
+}
+
+/// Recursively walk the directory tree and remove matching directories.
+fn clean_directories(path: &str, dirs: &[&str]) {
+    info!(
+        "Cleaning all directories that finished with either: {:?}",
+        dirs
+    );
+    for file in WalkDir::new(path).into_iter().filter_map(|file| {
+        let f = file.unwrap();
+        if f.file_type().is_dir() && dirs.iter().any(|v| f.path().ends_with(v)) {
+            Some(f)
+        } else {
+            None
+        }
+    }) {
+        let path = file.path();
+        info!("removing: {}", path.display());
+        fs::remove_dir_all(path).unwrap();
+    }
+}
+
 /// Main entry point for the Cleaner CLI tool.
 ///
 /// Parses command-line arguments, sets up logging, determines which directories to clean,
@@ -33,77 +99,19 @@ use crate::utils::{default_dirs_for_kind, setup_logger};
 /// * `Result<()>` - Ok on success, error if the path does not exist or a removal fails.
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Parse CLI arguments
-    let args = Args::parse();
+    // Parse CLI arguments and validate path
+    let (args, path) = parse_and_validate_args()?;
     // Set up logger with thread info and user-specified log level
     setup_logger(true, Some(&args.log));
-
-    let path = args.path;
-
-    info!("Cleaning directory: {}", &path);
-    // Check if the provided path exists
-    if fs::metadata(&path).is_err() {
-        return Err(eyre!(format!("Path {} do not exist", &path)));
+    // Determine which directories to clean
+    let dirs = determine_dirs_to_clean(&args);
+    // Confirm deletion unless forced
+    if !confirm_deletion(&dirs, args.force) {
+        println!("Aborted by user.");
+        return Ok(());
     }
-
-    // Determine which directories to clean based on kind or user override
-    let default_dirs = match &args.kind {
-        Some(kind) => default_dirs_for_kind(kind),
-        None => {
-            use std::collections::HashSet;
-            args::ProjectKind::value_variants()
-                .iter()
-                .flat_map(default_dirs_for_kind)
-                .collect::<HashSet<_>>() // deduplicate
-                .into_iter()
-                .collect::<Vec<_>>() // convert back to Vec
-        }
-    };
-    // Use user-supplied dirs if provided, otherwise use defaults
-    let dirs: Vec<&str> = match &args.dirs {
-        Some(dirs) => dirs.split(',').collect(),
-        None => default_dirs,
-    };
-
-    info!(
-        "Cleaning all directories that finished with either: {:?}",
-        dirs
-    );
-
-    // If not forced, prompt the user for confirmation before deleting
-    if !args.force {
-        use std::io::{self, Write};
-        println!("WARNING: The following directories will be deleted recursively:");
-        for d in &dirs {
-            println!("  - {}", d);
-        }
-        print!("Are you sure you want to proceed? [y/N]: ");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin().read_line(&mut input).unwrap();
-        let input = input.trim().to_lowercase();
-        if input != "y" && input != "yes" {
-            println!("Aborted by user.");
-            return Ok(());
-        }
-    }
-
-    // Recursively walk the directory tree and remove matching directories
-    for file in WalkDir::new(&path).into_iter().filter_map(|file| {
-        let f = file.unwrap();
-        // Only consider directories that match any of the target names
-        if f.file_type().is_dir() && dirs.iter().any(|v| f.path().ends_with(v)) {
-            Some(f)
-        } else {
-            None
-        }
-    }) {
-        let path = file.path();
-        info!("removing: {}", path.display());
-        // Remove the directory and all its contents
-        fs::remove_dir_all(path).unwrap();
-    }
-
+    // Clean the directories
+    clean_directories(&path, &dirs);
     info!("DONE.");
     Ok(())
 }
