@@ -61,8 +61,8 @@ fn confirm_deletion(dirs: &[&str], force: bool) -> bool {
     input == "y" || input == "yes"
 }
 
-/// Recursively walk the directory tree and remove matching directories.
-fn clean_directories(path: &str, dirs: &[&str]) {
+/// Recursively walk the directory tree and remove matching directories, or just print if dry_run is true.
+fn clean_directories(path: &str, dirs: &[&str], dry_run: bool) {
     info!(
         "Cleaning all directories that finished with either: {:?}",
         dirs
@@ -76,8 +76,12 @@ fn clean_directories(path: &str, dirs: &[&str]) {
         }
     }) {
         let path = file.path();
-        info!("removing: {}", path.display());
-        fs::remove_dir_all(path).unwrap();
+        if dry_run {
+            println!("Would remove: {}", path.display());
+        } else {
+            info!("removing: {}", path.display());
+            fs::remove_dir_all(path).unwrap();
+        }
     }
 }
 
@@ -102,7 +106,7 @@ async fn main() -> Result<()> {
         return Ok(());
     }
     // Clean the directories
-    clean_directories(&path, &dirs);
+    clean_directories(&path, &dirs, args.dry_run);
     info!("DONE.");
     Ok(())
 }

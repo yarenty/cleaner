@@ -68,6 +68,11 @@ pub struct Args {
     #[clap(short, long, action)]
     pub force: bool,
 
+    /// Show what would be deleted, but do not actually delete anything.
+    /// Example: --dry-run
+    #[clap(short = 'n', long, action)]
+    pub dry_run: bool,
+
     /// Set custom log level for output verbosity. Supported: info, debug, trace.
     /// Example: --log debug
     #[clap(short, long, default_value = "info")]
