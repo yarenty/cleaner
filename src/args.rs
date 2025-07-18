@@ -18,7 +18,7 @@ pub enum ProjectKind {
     All,
     /// JetBrains, VSCode, Visual Studio, Xcode, and other IDE leftovers
     Ide,
-    /// Rust projects (Cargo, etc.)
+    /// Rust projects (target, etc.)
     Rust,
     /// Python projects (venv, __pycache__, etc.)
     Python,
