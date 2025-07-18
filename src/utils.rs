@@ -134,36 +134,20 @@ pub fn default_dirs_for_kind(kind: &ProjectKind) -> Vec<&'static str> {
         ],
         ProjectKind::Php => vec!["vendor", "out", "build", "cache"],
         ProjectKind::Ruby => vec![".bundle", "vendor", "log", "tmp", "coverage"],
-        ProjectKind::All => vec![
-            "target",
-            "out",
-            "build",
-            "dist",
-            "node_modules",
-            ".idea",
-            ".vs",
-            ".vscode",
-            ".DS_Store",
-            ".history",
-            ".classpath",
-            ".project",
-            ".settings",
-            "xcuserdata",
-            "coverage",
-            ".next",
-            ".nuxt",
-            ".angular",
-            ".svelte-kit",
-            "__pycache__",
-            ".venv",
-            "venv",
-            "env",
-            ".mypy_cache",
-            ".pytest_cache",
-            "classes",
-            "generated-sources",
-            "generated-test-sources",
-        ],
+        ProjectKind::All => {
+            let mut dirs = vec![
+                "target", "out", "build", "dist", "node_modules", ".idea", ".vscode", ".vs", "coverage", ".next", ".nuxt", ".angular", ".svelte-kit", "vendor"
+            ];
+            // Platform-specific
+            if cfg!(target_os = "macos") {
+                dirs.push(".DS_Store");
+            }
+            if cfg!(target_os = "windows") {
+                dirs.push("Thumbs.db");
+                dirs.push("desktop.ini");
+            }
+            dirs
+        },
     }
 }
 
