@@ -223,20 +223,18 @@ fn main() {
         Ok(args) => {
             tokio_main(args).unwrap();
         }
-        Err(e) => {
-            match e.kind() {
-                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
-                    e.print().expect("Failed to print help/version");
-                    std::process::exit(0);
-                }
-                _ => {
-                    eprintln!("Cleaner v{}", env!("CARGO_PKG_VERSION"));
-                    eprintln!("Build: {}", env!("BUILD_DATE"));
-                    e.print().expect("Failed to print error");
-                    std::process::exit(1);
-                }
+        Err(e) => match e.kind() {
+            ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+                e.print().expect("Failed to print help/version");
+                std::process::exit(0);
             }
-        }
+            _ => {
+                eprintln!("Cleaner v{}", env!("CARGO_PKG_VERSION"));
+                eprintln!("Build: {}", env!("BUILD_DATE"));
+                e.print().expect("Failed to print error");
+                std::process::exit(1);
+            }
+        },
     }
 }
 
