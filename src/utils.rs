@@ -17,25 +17,23 @@ use env_logger::{Builder, WriteStyle};
 use log::{Level, LevelFilter, Record};
 use std::io::Write;
 use std::thread;
+use std::fs::OpenOptions;
 
 /// Sets up the logger with custom formatting.
 ///
 /// # Arguments
 /// * `log_thread` - If true, includes the thread name in log output.
 /// * `rust_log` - Optional log level filter string (e.g., "info", "debug").
+/// * `log_file` - Optional path to a file for logging output. If None, logs go to stdout.
 ///
 /// The logger outputs colored, timestamped log messages with optional thread info.
-pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
-    // Custom output format closure for env_logger
+pub fn setup_logger(log_thread: bool, rust_log: Option<&str>, log_file: Option<&str>) {
     let output_format = move |formatter: &mut Formatter, record: &Record| {
-        // Optionally include thread name
         let thread_name = if log_thread {
             format!("(t: {}) ", thread::current().name().unwrap_or("unknown"))
         } else {
             "".to_string()
         };
-
-        // Format log level as a string
         let level = match record.level() {
             Level::Error => "[ERROR]",
             Level::Warn => "[WARN]",
@@ -43,11 +41,8 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
             Level::Debug => "[DEBUG]",
             Level::Trace => "[TRACE]",
         };
-
-        // Get current local time for timestamp
         let local_time: DateTime<Local> = Local::now();
         let time_str = local_time.format("%H:%M:%S%.3f").to_string();
-        // Write formatted log message
         writeln!(
             formatter,
             "{} {}{} - {} - {}",
@@ -59,15 +54,19 @@ pub fn setup_logger(log_thread: bool, rust_log: Option<&str>) {
         )
     };
 
-    // Build and initialize the logger
     let mut builder = Builder::new();
     builder
         .format(output_format)
         .filter(None, LevelFilter::Info);
     builder.write_style(WriteStyle::Always);
 
-    // Optionally parse log level filter
     rust_log.map(|conf| builder.parse_filters(conf));
+
+    if let Some(path) = log_file {
+        if let Ok(file) = OpenOptions::new().create(true).append(true).open(path) {
+            builder.target(env_logger::Target::Pipe(Box::new(file)));
+        }
+    }
 
     builder.init();
 }

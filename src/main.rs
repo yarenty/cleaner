@@ -204,7 +204,7 @@ async fn main() -> Result<()> {
     // Parse CLI arguments and validate path
     let (args, path) = parse_and_validate_args()?;
     // Set up logger with thread info and user-specified log level
-    setup_logger(true, Some(&args.log));
+    setup_logger(true, Some(&args.log), args.log_file.as_deref());
     // Load config if provided
     let config = args.config.as_deref().map(load_config).flatten();
     // Determine which directories to clean

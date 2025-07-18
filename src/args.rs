@@ -108,6 +108,11 @@ pub struct Args {
     #[clap(short, long, default_value = "info")]
     pub log: String,
 
+    /// Path to a file for logging output. If not set, logs go to stdout.
+    /// Example: --log-file cleaner.log
+    #[clap(long)]
+    pub log_file: Option<String>,
+
     /// Maximum recursion depth for directory search. 0 means unlimited.
     /// Example: --max-depth 2
     #[clap(long, default_value = "0")]
