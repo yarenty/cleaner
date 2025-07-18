@@ -15,7 +15,7 @@
 mod args;
 mod utils;
 use clap::Parser;
-use color_eyre::eyre::{eyre, Result};
+use color_eyre::eyre::Result;
 use glob::Pattern;
 use log::info;
 use rayon::prelude::*;
@@ -59,16 +59,6 @@ fn load_config(path: &str) -> Option<Config> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).ok()?;
     toml::from_str(&contents).ok()
-}
-
-/// Parse CLI arguments and check if the path exists.
-fn parse_and_validate_args() -> Result<(Args, String)> {
-    let args = Args::parse();
-    let path = args.path.clone();
-    if fs::metadata(&path).is_err() {
-        return Err(eyre!(format!("Path {} do not exist", &path)));
-    }
-    Ok((args, path))
 }
 
 /// Determine which directories to clean based on kind or user override, deduplicated.
@@ -227,10 +217,31 @@ fn clean_directories(
 ///
 /// # Returns
 /// * `Result<()>` - Ok on success, error if the path does not exist or a removal fails.
+fn main() {
+    use clap::error::ErrorKind;
+    match Args::try_parse() {
+        Ok(args) => {
+            tokio_main(args).unwrap();
+        }
+        Err(e) => {
+            match e.kind() {
+                ErrorKind::DisplayHelp | ErrorKind::DisplayVersion => {
+                    e.print().expect("Failed to print help/version");
+                    std::process::exit(0);
+                }
+                _ => {
+                    eprintln!("Cleaner v{}", env!("CARGO_PKG_VERSION"));
+                    eprintln!("Build: {}", env!("BUILD_DATE"));
+                    eprintln!("Error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
+}
+
 #[tokio::main]
-async fn main() -> Result<()> {
-    // Parse CLI arguments and validate path
-    let (args, path) = parse_and_validate_args()?;
+async fn tokio_main(args: Args) -> Result<()> {
     // Set up logger with thread info and user-specified log level
     setup_logger(true, Some(&args.log), args.log_file.as_deref());
     // Load config if provided
@@ -252,7 +263,7 @@ async fn main() -> Result<()> {
     }
     // Clean the directories
     let (count, total_bytes) = clean_directories(
-        &path,
+        &args.path,
         &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         args.dry_run,
         &exclude.iter().map(|s| s.as_str()).collect::<Vec<_>>(),

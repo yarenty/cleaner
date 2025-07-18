@@ -61,10 +61,13 @@ impl fmt::Display for ProjectKind {
 ///
 /// Uses `clap` for parsing and help generation.
 #[derive(Parser, Debug)]
-#[clap(version)]
 #[clap(
-    about = "Cleaning build directories to save disk space. Supports multiple languages and IDEs.",
-    long_about = "Recursively finds and deletes build, cache, and temporary directories for supported project types (Rust, Python, Java, Node, Go, C#, C++, PHP, Ruby, and common IDEs). Use --kind to target a specific project type, or clean all by default. Use --dirs to override the directory list."
+    version,
+    about = "Cleaner: Fast, safe, and flexible build directory cleaner.",
+    long_about = "Cleaner v0.3.0\n\
+Fast, safe, and flexible build directory cleaner for Rust, Python, Node, Java, and more.\n\
+Usage: cleaner <PATH> [OPTIONS]\n\
+For more info, see https://github.com/yarenty/cleaner"
 )]
 pub struct Args {
     /// The root directory to start cleaning from. All subdirectories will be searched recursively.
