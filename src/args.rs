@@ -67,7 +67,8 @@ impl fmt::Display for ProjectKind {
     long_about = "Cleaner v0.3.0\n\
 Fast, safe, and flexible build directory cleaner for Rust, Python, Node, Java, and more.\n\
 Usage: cleaner <PATH> [OPTIONS]\n\
-For more info, see https://github.com/yarenty/cleaner"
+For more info, see https://github.com/yarenty/cleaner",
+    override_usage = "cleaner <PATH> [OPTIONS]\n\nOptions: --dry-run, --force, --exclude, --max-depth, --config, --log-file, --ci, ..."
 )]
 pub struct Args {
     /// The root directory to start cleaning from. All subdirectories will be searched recursively.

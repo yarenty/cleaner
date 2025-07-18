@@ -232,7 +232,7 @@ fn main() {
                 _ => {
                     eprintln!("Cleaner v{}", env!("CARGO_PKG_VERSION"));
                     eprintln!("Build: {}", env!("BUILD_DATE"));
-                    eprintln!("Error: {}", e);
+                    e.print().expect("Failed to print error");
                     std::process::exit(1);
                 }
             }
