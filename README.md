@@ -40,7 +40,7 @@ Cleaner is a command-line tool for reclaiming disk space by recursively removing
 1. **Clone the repository:**
 
 ```sh
-git clone <repo-url>
+git clone https://github.com/yarenty/cleaner.git
 cd cleaner
 ```
 
