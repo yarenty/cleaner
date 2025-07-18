@@ -38,67 +38,82 @@ Cleaner is a command-line tool for reclaiming disk space by recursively removing
 ## Installation
 
 1. **Clone the repository:**
-   ```sh
+
+```sh
 git clone <repo-url>
 cd cleaner
 ```
+
 2. **Build with Cargo:**
-   ```sh
+
+```sh
 cargo build --release
 ```
+
 3. **(Optional) Install globally:**
-   ```sh
+
+```sh
 cargo install --path .
 ```
 
 ## Usage
 
 ### Clean all known safe build directories (default)
+
 ```sh
 cleaner /path/to/your/project
 ```
 
 ### Clean only Python-related directories
+
 ```sh
 cleaner /path/to/your/project --kind python
 ```
 
 ### Clean custom directories
+
 ```sh
 cleaner /path/to/your/project --dirs node_modules,dist,coverage
 ```
 
 ### Exclude certain directories (supports patterns)
+
 ```sh
 cleaner /path/to/your/project --exclude .git,docs
 ```
 
 ### Use glob patterns for matching
+
 ```sh
 cleaner /path/to/your/project --dirs 'build*,*.cache'
 ```
 
 ### Limit recursion depth
+
 ```sh
 cleaner /path/to/your/project --max-depth 2
 ```
 
 ### Dry run (show what would be deleted)
+
 ```sh
 cleaner /path/to/your/project --dry-run
 ```
 
 ### Interactive mode (confirm each deletion)
+
 ```sh
 cleaner /path/to/your/project --interactive
 ```
 
 ### Use a config file (TOML)
+
 ```sh
 cleaner /path/to/your/project --config cleaner.toml
 ```
 
 **Example `cleaner.toml`:**
+
 ```toml
 [kinds.rust]
 dirs = ["target", "out", "build", "custom_rust_dir"]
@@ -108,16 +123,19 @@ patterns = [".git", "docs"]
 ```
 
 ### Log output to a file
+
 ```sh
 cleaner /path/to/your/project --log-file cleaner.log
 ```
 
 ### CI/CD mode (no prompts, JSON summary)
+
 ```sh
 cleaner /path/to/your/project --ci
 ```
 
 ### See all options
+
 ```sh
 cleaner --help
 ```
