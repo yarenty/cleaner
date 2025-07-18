@@ -62,14 +62,19 @@ fn confirm_deletion(dirs: &[&str], force: bool) -> bool {
 }
 
 /// Recursively walk the directory tree and remove matching directories, or just print if dry_run is true.
-fn clean_directories(path: &str, dirs: &[&str], dry_run: bool) {
+fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str]) {
     info!(
-        "Cleaning all directories that finished with either: {:?}",
-        dirs
+        "Cleaning all directories that finished with either: {:?}, excluding: {:?}",
+        dirs, exclude
     );
     for file in WalkDir::new(path).into_iter().filter_map(|file| {
         let f = file.unwrap();
-        if f.file_type().is_dir() && dirs.iter().any(|v| f.path().ends_with(v)) {
+        let file_path = f.path();
+        // Only consider directories that match any of the target names and are not excluded
+        if f.file_type().is_dir()
+            && dirs.iter().any(|v| file_path.ends_with(v))
+            && !exclude.iter().any(|ex| file_path.ends_with(ex))
+        {
             Some(f)
         } else {
             None
@@ -100,13 +105,15 @@ async fn main() -> Result<()> {
     setup_logger(true, Some(&args.log));
     // Determine which directories to clean
     let dirs = determine_dirs_to_clean(&args);
+    // Parse exclude list
+    let exclude: Vec<&str> = args.exclude.as_deref().unwrap_or("").split(',').filter(|s| !s.is_empty()).collect();
     // Confirm deletion unless forced
     if !confirm_deletion(&dirs, args.force) {
         println!("Aborted by user.");
         return Ok(());
     }
     // Clean the directories
-    clean_directories(&path, &dirs, args.dry_run);
+    clean_directories(&path, &dirs, args.dry_run, &exclude);
     info!("DONE.");
     Ok(())
 }

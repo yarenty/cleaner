@@ -57,6 +57,11 @@ pub struct Args {
     #[clap(short, long)]
     pub dirs: Option<String>,
 
+    /// Comma-separated list of directory names or patterns to exclude from cleaning.
+    /// Example: --exclude .git,docs
+    #[clap(short, long)]
+    pub exclude: Option<String>,
+
     /// Project type/kind to target for cleaning. Supported values: all (default), ide, rust, python, java, node, go, csharp, cpp, php, ruby.
     /// If not specified, only universally safe build and IDE directories will be cleaned.
     /// Example: --kind python
