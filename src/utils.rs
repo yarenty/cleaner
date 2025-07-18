@@ -15,9 +15,9 @@ use chrono::prelude::*;
 use env_logger::fmt::Formatter;
 use env_logger::{Builder, WriteStyle};
 use log::{Level, LevelFilter, Record};
+use std::fs::OpenOptions;
 use std::io::Write;
 use std::thread;
-use std::fs::OpenOptions;
 
 /// Sets up the logger with custom formatting.
 ///
@@ -136,7 +136,20 @@ pub fn default_dirs_for_kind(kind: &ProjectKind) -> Vec<&'static str> {
         ProjectKind::Ruby => vec![".bundle", "vendor", "log", "tmp", "coverage"],
         ProjectKind::All => {
             let mut dirs = vec![
-                "target", "out", "build", "dist", "node_modules", ".idea", ".vscode", ".vs", "coverage", ".next", ".nuxt", ".angular", ".svelte-kit", "vendor"
+                "target",
+                "out",
+                "build",
+                "dist",
+                "node_modules",
+                ".idea",
+                ".vscode",
+                ".vs",
+                "coverage",
+                ".next",
+                ".nuxt",
+                ".angular",
+                ".svelte-kit",
+                "vendor",
             ];
             // Platform-specific
             if cfg!(target_os = "macos") {
@@ -147,7 +160,7 @@ pub fn default_dirs_for_kind(kind: &ProjectKind) -> Vec<&'static str> {
                 dirs.push("desktop.ini");
             }
             dirs
-        },
+        }
     }
 }
 

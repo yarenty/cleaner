@@ -16,16 +16,15 @@ mod args;
 mod utils;
 use clap::Parser;
 use color_eyre::eyre::{eyre, Result};
-use log::info;
-use std::fs;
-use walkdir::WalkDir;
 use glob::Pattern;
+use log::info;
+use rayon::prelude::*;
 use serde::Deserialize;
+use serde::Serialize;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
-use rayon::prelude::*;
-use serde::Serialize;
-use serde_json;
+use walkdir::WalkDir;
 
 use crate::args::Args;
 use crate::utils::{default_dirs_for_kind, setup_logger};
@@ -80,7 +79,11 @@ fn determine_dirs_to_clean(args: &Args, config: &Option<Config>) -> Vec<String> 
     }
     if let Some(cfg) = config {
         if let Some(kinds) = &cfg.kinds {
-            let kind_key = args.kind.as_ref().map(|k| format!("{}", k).to_lowercase()).unwrap_or("all".to_string());
+            let kind_key = args
+                .kind
+                .as_ref()
+                .map(|k| format!("{}", k).to_lowercase())
+                .unwrap_or("all".to_string());
             if let Some(kind_cfg) = kinds.get(&kind_key) {
                 if let Some(dirs) = &kind_cfg.dirs {
                     return dirs.clone();
@@ -101,7 +104,11 @@ fn determine_dirs_to_clean(args: &Args, config: &Option<Config>) -> Vec<String> 
 fn determine_exclude(args: &Args, config: &Option<Config>) -> Vec<String> {
     // CLI takes precedence, then config, then empty
     if let Some(ex) = &args.exclude {
-        return ex.split(',').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
+        return ex
+            .split(',')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
     }
     if let Some(cfg) = config {
         if let Some(exclude) = &cfg.exclude {
@@ -133,7 +140,15 @@ fn confirm_deletion(dirs: &[&str], force: bool, dry_run: bool, ci: bool) -> bool
 
 /// Recursively walk the directory tree and remove matching directories, or just print if dry_run is true.
 /// Returns (number of directories, total bytes that would be or were deleted)
-fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str], max_depth: usize, interactive: bool, force: bool) -> (usize, u64) {
+fn clean_directories(
+    path: &str,
+    dirs: &[&str],
+    dry_run: bool,
+    exclude: &[&str],
+    max_depth: usize,
+    interactive: bool,
+    force: bool,
+) -> (usize, u64) {
     info!(
         "Cleaning all directories that finished with either: {:?}, excluding: {:?}, max_depth: {}",
         dirs, exclude, max_depth
@@ -144,7 +159,10 @@ fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str],
     }
     // Compile glob patterns for dirs and exclude
     let dir_patterns: Vec<Pattern> = dirs.iter().filter_map(|p| Pattern::new(p).ok()).collect();
-    let exclude_patterns: Vec<Pattern> = exclude.iter().filter_map(|p| Pattern::new(p).ok()).collect();
+    let exclude_patterns: Vec<Pattern> = exclude
+        .iter()
+        .filter_map(|p| Pattern::new(p).ok())
+        .collect();
     // Collect all target directories first
     let targets: Vec<_> = walkdir
         .into_iter()
@@ -216,14 +234,19 @@ async fn main() -> Result<()> {
     // Set up logger with thread info and user-specified log level
     setup_logger(true, Some(&args.log), args.log_file.as_deref());
     // Load config if provided
-    let config = args.config.as_deref().map(load_config).flatten();
+    let config = args.config.as_deref().and_then(load_config);
     // Determine which directories to clean
     let dirs = determine_dirs_to_clean(&args, &config);
     // Parse exclude list
     let exclude = determine_exclude(&args, &config);
     // Confirm deletion unless forced
     let force = args.force || args.ci;
-    if !confirm_deletion(&dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(), force, args.dry_run, args.ci) {
+    if !confirm_deletion(
+        &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        force,
+        args.dry_run,
+        args.ci,
+    ) {
         println!("Aborted by user.");
         return Ok(());
     }
@@ -248,7 +271,11 @@ async fn main() -> Result<()> {
     } else if args.dry_run {
         println!("Dry run: {} directories would be removed.", count);
     } else {
-        println!("Removed {} directories. (Total size: {:.2} MB)", count, total_bytes as f64 / 1_048_576.0);
+        println!(
+            "Removed {} directories. (Total size: {:.2} MB)",
+            count,
+            total_bytes as f64 / 1_048_576.0
+        );
     }
     info!("DONE.");
     Ok(())

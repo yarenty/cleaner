@@ -21,7 +21,9 @@ fn dry_run_does_not_delete() {
     create_dir_with_file(root, "target", "should_delete.txt");
     let mut cmd = Command::cargo_bin("cleaner").unwrap();
     cmd.arg(root).arg("--dry-run");
-    cmd.assert().success().stdout(predicates::str::contains("Would remove"));
+    cmd.assert()
+        .success()
+        .stdout(predicates::str::contains("Would remove"));
     assert!(root.join("target").exists());
 }
 
@@ -33,7 +35,10 @@ fn exclude_skips_dir() {
     create_dir_with_file(root, "target", "should_delete.txt");
     create_dir_with_file(root, "keepme", "should_keep.txt");
     let mut cmd = Command::cargo_bin("cleaner").unwrap();
-    cmd.arg(root).arg("--force").arg("--dirs=target,keepme").arg("--exclude=keepme");
+    cmd.arg(root)
+        .arg("--force")
+        .arg("--dirs=target,keepme")
+        .arg("--exclude=keepme");
     cmd.assert().success();
     assert!(!root.join("target").exists());
     assert!(root.join("keepme").exists());
@@ -60,7 +65,10 @@ fn log_file_is_created() {
     create_dir_with_file(root, "target", "should_delete.txt");
     let log_path = root.join("cleaner.log");
     let mut cmd = Command::cargo_bin("cleaner").unwrap();
-    cmd.arg(root).arg("--force").arg("--log-file").arg(&log_path);
+    cmd.arg(root)
+        .arg("--force")
+        .arg("--log-file")
+        .arg(&log_path);
     cmd.assert().success();
     assert!(log_path.exists());
 }
@@ -92,7 +100,10 @@ dirs = ["custom"]
 "#;
     std::fs::write(&config_path, config).unwrap();
     let mut cmd = Command::cargo_bin("cleaner").unwrap();
-    cmd.arg(root).arg("--force").arg("--config").arg(&config_path);
+    cmd.arg(root)
+        .arg("--force")
+        .arg("--config")
+        .arg(&config_path);
     cmd.assert().success();
     assert!(!root.join("custom").exists());
 }
