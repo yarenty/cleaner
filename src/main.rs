@@ -19,6 +19,7 @@ use color_eyre::eyre::{eyre, Result};
 use log::info;
 use std::fs;
 use walkdir::WalkDir;
+use glob::Pattern;
 
 use crate::args::Args;
 use crate::utils::{default_dirs_for_kind, setup_logger};
@@ -67,13 +68,17 @@ fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str])
         "Cleaning all directories that finished with either: {:?}, excluding: {:?}",
         dirs, exclude
     );
+    // Compile glob patterns for dirs and exclude
+    let dir_patterns: Vec<Pattern> = dirs.iter().filter_map(|p| Pattern::new(p).ok()).collect();
+    let exclude_patterns: Vec<Pattern> = exclude.iter().filter_map(|p| Pattern::new(p).ok()).collect();
     for file in WalkDir::new(path).into_iter().filter_map(|file| {
         let f = file.unwrap();
         let file_path = f.path();
-        // Only consider directories that match any of the target names and are not excluded
+        let file_name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+        // Only consider directories that match any of the target patterns and are not excluded
         if f.file_type().is_dir()
-            && dirs.iter().any(|v| file_path.ends_with(v))
-            && !exclude.iter().any(|ex| file_path.ends_with(ex))
+            && dir_patterns.iter().any(|pat| pat.matches(file_name))
+            && !exclude_patterns.iter().any(|pat| pat.matches(file_name))
         {
             Some(f)
         } else {
