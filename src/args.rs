@@ -103,6 +103,11 @@ pub struct Args {
     #[clap(short, long, action)]
     pub interactive: bool,
 
+    /// Enable CI/CD mode: suppress prompts, force deletion, and output JSON summary.
+    /// Example: --ci
+    #[clap(long, action)]
+    pub ci: bool,
+
     /// Set custom log level for output verbosity. Supported: info, debug, trace.
     /// Example: --log debug
     #[clap(short, long, default_value = "info")]

@@ -24,6 +24,8 @@ use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
 use rayon::prelude::*;
+use serde::Serialize;
+use serde_json;
 
 use crate::args::Args;
 use crate::utils::{default_dirs_for_kind, setup_logger};
@@ -42,6 +44,14 @@ struct KindConfig {
 #[derive(Debug, Deserialize)]
 struct ExcludeConfig {
     patterns: Option<Vec<String>>,
+}
+
+#[derive(Serialize)]
+struct Summary {
+    directories: usize,
+    total_bytes: u64,
+    total_mb: f64,
+    dry_run: bool,
 }
 
 /// Load config from a TOML file path, if provided.
@@ -217,6 +227,7 @@ async fn main() -> Result<()> {
         return Ok(());
     }
     // Clean the directories
+    let force = args.force || args.ci;
     let (count, total_bytes) = clean_directories(
         &path,
         &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
@@ -224,9 +235,17 @@ async fn main() -> Result<()> {
         &exclude.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
         args.max_depth,
         args.interactive,
-        args.force,
+        force,
     );
-    if args.dry_run {
+    if args.ci {
+        let summary = Summary {
+            directories: count,
+            total_bytes,
+            total_mb: total_bytes as f64 / 1_048_576.0,
+            dry_run: args.dry_run,
+        };
+        println!("{}", serde_json::to_string(&summary).unwrap());
+    } else if args.dry_run {
         println!("Dry run: {} directories would be removed.", count);
     } else {
         println!("Removed {} directories. (Total size: {:.2} MB)", count, total_bytes as f64 / 1_048_576.0);
