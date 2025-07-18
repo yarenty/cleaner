@@ -123,7 +123,7 @@ fn confirm_deletion(dirs: &[&str], force: bool) -> bool {
 
 /// Recursively walk the directory tree and remove matching directories, or just print if dry_run is true.
 /// Returns (number of directories, total bytes that would be or were deleted)
-fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str], max_depth: usize) -> (usize, u64) {
+fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str], max_depth: usize, interactive: bool, force: bool) -> (usize, u64) {
     info!(
         "Cleaning all directories that finished with either: {:?}, excluding: {:?}, max_depth: {}",
         dirs, exclude, max_depth
@@ -159,6 +159,23 @@ fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str],
             println!("Would remove: {}", path.display());
             if let Ok(meta) = fs::metadata(path) {
                 total_bytes += meta.len();
+            }
+        }
+    } else if interactive && !force {
+        use std::io::{self, Write};
+        for path in &targets {
+            print!("Delete {}? [y/N]: ", path.display());
+            io::stdout().flush().unwrap();
+            let mut input = String::new();
+            io::stdin().read_line(&mut input).unwrap();
+            let input = input.trim().to_lowercase();
+            if input == "y" || input == "yes" {
+                info!("removing: {}", path.display());
+                let size = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+                let _ = fs::remove_dir_all(path);
+                total_bytes += size;
+            } else {
+                println!("Skipped: {}", path.display());
             }
         }
     } else {
@@ -200,7 +217,15 @@ async fn main() -> Result<()> {
         return Ok(());
     }
     // Clean the directories
-    let (count, total_bytes) = clean_directories(&path, &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(), args.dry_run, &exclude.iter().map(|s| s.as_str()).collect::<Vec<_>>(), args.max_depth);
+    let (count, total_bytes) = clean_directories(
+        &path,
+        &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        args.dry_run,
+        &exclude.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+        args.max_depth,
+        args.interactive,
+        args.force,
+    );
     if args.dry_run {
         println!("Dry run: {} directories would be removed.", count);
     } else {

@@ -98,6 +98,11 @@ pub struct Args {
     #[clap(short = 'n', long, action)]
     pub dry_run: bool,
 
+    /// Prompt for confirmation before deleting each directory.
+    /// Example: --interactive
+    #[clap(short, long, action)]
+    pub interactive: bool,
+
     /// Set custom log level for output verbosity. Supported: info, debug, trace.
     /// Example: --log debug
     #[clap(short, long, default_value = "info")]
