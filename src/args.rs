@@ -7,6 +7,7 @@
 //! - `Args` struct defines all CLI arguments, their help text, and parsing rules.
 
 use clap::{Parser, ValueEnum};
+use std::fmt;
 
 /// Supported project types/languages/IDEs for cleaning.
 ///
@@ -35,6 +36,25 @@ pub enum ProjectKind {
     Php,
     /// Ruby projects (.bundle, tmp, etc.)
     Ruby,
+}
+
+impl fmt::Display for ProjectKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            ProjectKind::All => "all",
+            ProjectKind::Ide => "ide",
+            ProjectKind::Rust => "rust",
+            ProjectKind::Python => "python",
+            ProjectKind::Java => "java",
+            ProjectKind::Node => "node",
+            ProjectKind::Go => "go",
+            ProjectKind::CSharp => "csharp",
+            ProjectKind::Cpp => "cpp",
+            ProjectKind::Php => "php",
+            ProjectKind::Ruby => "ruby",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 /// Command-line arguments for the Cleaner CLI tool.
@@ -87,4 +107,9 @@ pub struct Args {
     /// Example: --max-depth 2
     #[clap(long, default_value = "0")]
     pub max_depth: usize,
+
+    /// Path to a custom config file (TOML) for directory and exclusion settings.
+    /// Example: --config cleaner.toml
+    #[clap(long)]
+    pub config: Option<String>,
 }

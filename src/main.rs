@@ -20,9 +20,36 @@ use log::info;
 use std::fs;
 use walkdir::WalkDir;
 use glob::Pattern;
+use serde::Deserialize;
+use std::fs::File;
+use std::io::Read;
 
 use crate::args::Args;
 use crate::utils::{default_dirs_for_kind, setup_logger};
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    kinds: Option<std::collections::HashMap<String, KindConfig>>,
+    exclude: Option<ExcludeConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+struct KindConfig {
+    dirs: Option<Vec<String>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ExcludeConfig {
+    patterns: Option<Vec<String>>,
+}
+
+/// Load config from a TOML file path, if provided.
+fn load_config(path: &str) -> Option<Config> {
+    let mut file = File::open(path).ok()?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).ok()?;
+    toml::from_str(&contents).ok()
+}
 
 /// Parse CLI arguments and check if the path exists.
 fn parse_and_validate_args() -> Result<(Args, String)> {
@@ -35,13 +62,44 @@ fn parse_and_validate_args() -> Result<(Args, String)> {
 }
 
 /// Determine which directories to clean based on kind or user override, deduplicated.
-fn determine_dirs_to_clean(args: &Args) -> Vec<&str> {
+fn determine_dirs_to_clean(args: &Args, config: &Option<Config>) -> Vec<String> {
+    // CLI takes precedence, then config, then default
+    if let Some(dirs) = &args.dirs {
+        return dirs.split(',').map(|s| s.to_string()).collect();
+    }
+    if let Some(cfg) = config {
+        if let Some(kinds) = &cfg.kinds {
+            let kind_key = args.kind.as_ref().map(|k| format!("{}", k).to_lowercase()).unwrap_or("all".to_string());
+            if let Some(kind_cfg) = kinds.get(&kind_key) {
+                if let Some(dirs) = &kind_cfg.dirs {
+                    return dirs.clone();
+                }
+            }
+        }
+    }
+    // Fallback to built-in logic
     match &args.kind {
         Some(kind) => default_dirs_for_kind(kind),
         None => default_dirs_for_kind(&args::ProjectKind::All),
     }
     .into_iter()
-    .collect::<Vec<_>>()
+    .map(|s| s.to_string())
+    .collect()
+}
+
+fn determine_exclude(args: &Args, config: &Option<Config>) -> Vec<String> {
+    // CLI takes precedence, then config, then empty
+    if let Some(ex) = &args.exclude {
+        return ex.split(',').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect();
+    }
+    if let Some(cfg) = config {
+        if let Some(exclude) = &cfg.exclude {
+            if let Some(patterns) = &exclude.patterns {
+                return patterns.clone();
+            }
+        }
+    }
+    vec![]
 }
 
 /// Prompt the user for confirmation unless force is set. Returns true if confirmed.
@@ -112,17 +170,19 @@ async fn main() -> Result<()> {
     let (args, path) = parse_and_validate_args()?;
     // Set up logger with thread info and user-specified log level
     setup_logger(true, Some(&args.log));
+    // Load config if provided
+    let config = args.config.as_deref().map(load_config).flatten();
     // Determine which directories to clean
-    let dirs = determine_dirs_to_clean(&args);
+    let dirs = determine_dirs_to_clean(&args, &config);
     // Parse exclude list
-    let exclude: Vec<&str> = args.exclude.as_deref().unwrap_or("").split(',').filter(|s| !s.is_empty()).collect();
+    let exclude = determine_exclude(&args, &config);
     // Confirm deletion unless forced
-    if !confirm_deletion(&dirs, args.force) {
+    if !confirm_deletion(&dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(), args.force) {
         println!("Aborted by user.");
         return Ok(());
     }
     // Clean the directories
-    clean_directories(&path, &dirs, args.dry_run, &exclude, args.max_depth);
+    clean_directories(&path, &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(), args.dry_run, &exclude.iter().map(|s| s.as_str()).collect::<Vec<_>>(), args.max_depth);
     info!("DONE.");
     Ok(())
 }
