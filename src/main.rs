@@ -15,7 +15,6 @@
 mod args;
 mod utils;
 use clap::Parser;
-use clap::ValueEnum;
 use color_eyre::eyre::{eyre, Result};
 use log::info;
 use std::fs;
@@ -38,15 +37,7 @@ fn parse_and_validate_args() -> Result<(Args, String)> {
 fn determine_dirs_to_clean(args: &Args) -> Vec<&str> {
     match &args.kind {
         Some(kind) => default_dirs_for_kind(kind),
-        None => {
-            use std::collections::HashSet;
-            args::ProjectKind::value_variants()
-                .iter()
-                .flat_map(default_dirs_for_kind)
-                .collect::<HashSet<_>>() //deduplication
-                .into_iter()
-                .collect::<Vec<_>>()
-        }
+        None => default_dirs_for_kind(&args::ProjectKind::All),
     }
     .into_iter()
     .collect::<Vec<_>>()

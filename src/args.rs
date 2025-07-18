@@ -13,6 +13,8 @@ use clap::{Parser, ValueEnum};
 /// Each variant corresponds to a set of build/cache/temp directories that can be cleaned.
 #[derive(ValueEnum, Debug, Clone)]
 pub enum ProjectKind {
+    /// Universally safe build and IDE directories (default)
+    All,
     /// JetBrains, VSCode, Visual Studio, Xcode, and other IDE leftovers
     Ide,
     /// Rust projects (Cargo, etc.)
@@ -55,10 +57,10 @@ pub struct Args {
     #[clap(short, long)]
     pub dirs: Option<String>,
 
-    /// Project type/kind to target for cleaning. Supported values: ide, rust, python, java, node, go, csharp, cpp, php, ruby.
-    /// If not specified, all known build/cache/temp directories for all supported kinds will be cleaned.
+    /// Project type/kind to target for cleaning. Supported values: all (default), ide, rust, python, java, node, go, csharp, cpp, php, ruby.
+    /// If not specified, only universally safe build and IDE directories will be cleaned.
     /// Example: --kind python
-    #[clap(short, long, value_enum)]
+    #[clap(short, long, value_enum, default_value = "all")]
     pub kind: Option<ProjectKind>,
 
     /// Skip confirmation prompt and force deletion of directories.
