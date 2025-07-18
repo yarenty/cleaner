@@ -1,7 +1,7 @@
+use assert_cmd::Command;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::Path;
-use assert_cmd::Command;
 use tempfile::tempdir;
 
 // Helper to create a directory and a file inside it
@@ -25,9 +25,9 @@ fn cleans_build_dirs_and_leaves_normal_files() {
     create_dir_with_file(root, "src", "main.rs"); // should NOT be deleted
     File::create(root.join("README.md")).unwrap(); // should NOT be deleted
 
-    // Run the cleaner binary
+    // Run the cleaner binary with --force to skip confirmation
     let mut cmd = Command::cargo_bin("cleaner").unwrap();
-    cmd.arg(root);
+    cmd.arg(root).arg("--force");
     cmd.assert().success();
 
     // Assert build dirs are gone
@@ -38,4 +38,4 @@ fn cleans_build_dirs_and_leaves_normal_files() {
     assert!(root.join("src").exists());
     assert!(root.join("src/main.rs").exists());
     assert!(root.join("README.md").exists());
-} 
+}

@@ -1,38 +1,70 @@
+//! Argument parsing definitions for the Cleaner CLI tool.
+//!
+//! This module defines the command-line arguments, project kind enum, and their documentation for the Cleaner project.
+//! It uses the `clap` crate for robust and user-friendly argument parsing.
+//!
+//! - `ProjectKind` enumerates all supported project types/languages/IDEs.
+//! - `Args` struct defines all CLI arguments, their help text, and parsing rules.
+
 use clap::{Parser, ValueEnum};
 
+/// Supported project types/languages/IDEs for cleaning.
+///
+/// Each variant corresponds to a set of build/cache/temp directories that can be cleaned.
 #[derive(ValueEnum, Debug, Clone)]
 pub enum ProjectKind {
+    /// JetBrains, VSCode, Visual Studio, Xcode, and other IDE leftovers
     Ide,
+    /// Rust projects (Cargo, etc.)
     Rust,
+    /// Python projects (venv, __pycache__, etc.)
     Python,
+    /// Java projects (Maven, Gradle, etc.)
     Java,
+    /// Node.js/JavaScript/TypeScript projects (node_modules, dist, etc.)
     Node,
+    /// Go projects (bin, pkg, etc.)
     Go,
+    /// C#/.NET projects (bin, obj, etc.)
     CSharp,
+    /// C/C++ projects (build, CMakeFiles, etc.)
     Cpp,
+    /// PHP projects (vendor, cache, etc.)
     Php,
+    /// Ruby projects (.bundle, tmp, etc.)
     Ruby,
 }
 
+/// Command-line arguments for the Cleaner CLI tool.
+///
+/// Uses `clap` for parsing and help generation.
 #[derive(Parser, Debug)]
 #[clap(version)]
-#[clap(about = "Cleaning build directories to save disk space. Supports multiple languages and IDEs.", long_about = "Recursively finds and deletes build, cache, and temporary directories for supported project types (Rust, Python, Java, Node, Go, C#, C++, PHP, Ruby, and common IDEs). Use --kind to target a specific project type, or clean all by default. Use --dirs to override the directory list.")]
+#[clap(
+    about = "Cleaning build directories to save disk space. Supports multiple languages and IDEs.",
+    long_about = "Recursively finds and deletes build, cache, and temporary directories for supported project types (Rust, Python, Java, Node, Go, C#, C++, PHP, Ruby, and common IDEs). Use --kind to target a specific project type, or clean all by default. Use --dirs to override the directory list."
+)]
 pub struct Args {
     /// The root directory to start cleaning from. All subdirectories will be searched recursively.
     /// Example: /home/user/projects or .
     #[clap(value_parser)]
     pub path: String,
 
-    /// Comma-separated list of directory names to clean. Overrides the default for the selected kind.
+    /// Comma-separated list of directory names to clean. If not provided, uses defaults for the selected kind(s).
     /// Example: --dirs target,out,build,node_modules
-    #[clap(short, long, default_value = "target,out,build")]
-    pub dirs: String,
+    #[clap(short, long)]
+    pub dirs: Option<String>,
 
     /// Project type/kind to target for cleaning. Supported values: ide, rust, python, java, node, go, csharp, cpp, php, ruby.
     /// If not specified, all known build/cache/temp directories for all supported kinds will be cleaned.
     /// Example: --kind python
-    #[clap(long, value_enum)]
+    #[clap(short, long, value_enum)]
     pub kind: Option<ProjectKind>,
+
+    /// Skip confirmation prompt and force deletion of directories.
+    /// Example: --force
+    #[clap(short, long, action)]
+    pub force: bool,
 
     /// Set custom log level for output verbosity. Supported: info, debug, trace.
     /// Example: --log debug
