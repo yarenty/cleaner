@@ -1,8 +1,21 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## 0.3.0
+- Added --dry-run to preview deletions without removing anything
+- Added --exclude for skipping directories (supports patterns)
+- Added glob/pattern matching for --dirs and --exclude
+- Added --max-depth to limit recursion
+- Added TOML config file support (--config)
+- Added summary report (number of directories, total space freed)
+- Parallel deletion for faster cleaning
+- Added --interactive to confirm each deletion
+- Added --log-file for logging output to a file
+- Added --ci for CI/CD mode (JSON summary, no prompts)
+- Platform-specific cleaning (.DS_Store, Thumbs.db, etc.)
+- Comprehensive integration tests for all features
+- Updated README and documentation
 
-## 2025/07/18
+## 0.2.0 
 - Add support for multiple project types: Rust, Python, Java, Node.js, Go, C#, C++, PHP, Ruby, and common IDEs.
 - New CLI argument `--kind` to select project type for cleaning.
 - If `--kind` is not specified, all known build/cache/temp directories are cleaned by default.
@@ -24,4 +37,4 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## 2021 - initial version of project
+## 0.1.0 -2021 - initial version of project
