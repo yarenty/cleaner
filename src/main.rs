@@ -23,6 +23,7 @@ use glob::Pattern;
 use serde::Deserialize;
 use std::fs::File;
 use std::io::Read;
+use rayon::prelude::*;
 
 use crate::args::Args;
 use crate::utils::{default_dirs_for_kind, setup_logger};
@@ -134,34 +135,42 @@ fn clean_directories(path: &str, dirs: &[&str], dry_run: bool, exclude: &[&str],
     // Compile glob patterns for dirs and exclude
     let dir_patterns: Vec<Pattern> = dirs.iter().filter_map(|p| Pattern::new(p).ok()).collect();
     let exclude_patterns: Vec<Pattern> = exclude.iter().filter_map(|p| Pattern::new(p).ok()).collect();
-    let mut count = 0;
+    // Collect all target directories first
+    let targets: Vec<_> = walkdir
+        .into_iter()
+        .filter_map(|file| {
+            let f = file.unwrap();
+            let file_path = f.path();
+            let file_name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            if f.file_type().is_dir()
+                && dir_patterns.iter().any(|pat| pat.matches(file_name))
+                && !exclude_patterns.iter().any(|pat| pat.matches(file_name))
+            {
+                Some(file_path.to_path_buf())
+            } else {
+                None
+            }
+        })
+        .collect();
+    let count = targets.len();
     let mut total_bytes = 0u64;
-    for file in walkdir.into_iter().filter_map(|file| {
-        let f = file.unwrap();
-        let file_path = f.path();
-        let file_name = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        // Only consider directories that match any of the target patterns and are not excluded
-        if f.file_type().is_dir()
-            && dir_patterns.iter().any(|pat| pat.matches(file_name))
-            && !exclude_patterns.iter().any(|pat| pat.matches(file_name))
-        {
-            Some(f)
-        } else {
-            None
-        }
-    }) {
-        let path = file.path();
-        count += 1;
-        // Try to sum up the size of the directory (best effort)
-        if let Ok(meta) = fs::metadata(path) {
-            total_bytes += meta.len();
-        }
-        if dry_run {
+    if dry_run {
+        for path in &targets {
             println!("Would remove: {}", path.display());
-        } else {
-            info!("removing: {}", path.display());
-            fs::remove_dir_all(path).unwrap();
+            if let Ok(meta) = fs::metadata(path) {
+                total_bytes += meta.len();
+            }
         }
+    } else {
+        total_bytes = targets
+            .par_iter()
+            .map(|path| {
+                info!("removing: {}", path.display());
+                let size = fs::metadata(path).map(|m| m.len()).unwrap_or(0);
+                let _ = fs::remove_dir_all(path);
+                size
+            })
+            .sum();
     }
     (count, total_bytes)
 }
