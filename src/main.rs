@@ -114,8 +114,8 @@ fn determine_exclude(args: &Args, config: &Option<Config>) -> Vec<String> {
 }
 
 /// Prompt the user for confirmation unless force is set. Returns true if confirmed.
-fn confirm_deletion(dirs: &[&str], force: bool) -> bool {
-    if force {
+fn confirm_deletion(dirs: &[&str], force: bool, dry_run: bool, ci: bool) -> bool {
+    if force || dry_run || ci {
         return true;
     }
     use std::io::{self, Write};
@@ -222,12 +222,12 @@ async fn main() -> Result<()> {
     // Parse exclude list
     let exclude = determine_exclude(&args, &config);
     // Confirm deletion unless forced
-    if !confirm_deletion(&dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(), args.force) {
+    let force = args.force || args.ci;
+    if !confirm_deletion(&dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(), force, args.dry_run, args.ci) {
         println!("Aborted by user.");
         return Ok(());
     }
     // Clean the directories
-    let force = args.force || args.ci;
     let (count, total_bytes) = clean_directories(
         &path,
         &dirs.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
